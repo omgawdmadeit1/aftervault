@@ -1,0 +1,59 @@
+{
+  "id": "/",
+  "name": "AfterVault",
+  "short_name": "AfterVault",
+  "description": "The operational manual for your life — build it quietly now, guide your people when it matters.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f6f5f2",
+  "theme_color": "#3d6b5e",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["lifestyle", "productivity", "finance"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Weekly prompt",
+      "short_name": "Prompt",
+      "description": "Answer this week's micro-prompt",
+      "url": "/app/prompt",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "After mode",
+      "short_name": "After",
+      "description": "Open the guided checklist",
+      "url": "/app/after",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Vault",
+      "short_name": "Vault",
+      "description": "Browse your operational vault",
+      "url": "/app/vault",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

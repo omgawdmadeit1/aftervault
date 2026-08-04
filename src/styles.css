@@ -1,0 +1,123 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --color-bg: #f6f5f2;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #eeede8;
+  --color-fg: #1a1d21;
+  --color-fg-muted: #5c646c;
+  --color-fg-subtle: #8a9299;
+  --color-border: #e2e0d9;
+  --color-border-strong: #cfcabe;
+
+  --color-primary: #3d6b5e;
+  --color-primary-fg: #f7faf8;
+  --color-primary-soft: #e6f0ec;
+  --color-accent: #4a7c6f;
+  --color-accent-soft: #dfece7;
+
+  --color-success: #2f6b4f;
+  --color-success-soft: #e4f2ea;
+  --color-warn: #8a6a2a;
+  --color-warn-soft: #f5efdf;
+  --color-danger: #9b3d3d;
+  --color-danger-soft: #f6e8e8;
+
+  --color-ring: #3d6b5e;
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 1.75rem;
+
+  --shadow-soft: 0 1px 2px rgb(26 29 33 / 0.04), 0 8px 24px rgb(26 29 33 / 0.04);
+  --shadow-card: 0 1px 1px rgb(26 29 33 / 0.03), 0 10px 30px rgb(26 29 33 / 0.05);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    min-height: 100svh;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Prevent iOS zoom on focus — inputs must be ≥16px on small screens */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  @media (min-width: 640px) {
+    input,
+    textarea,
+    select {
+      font-size: 0.875rem;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-primary) 22%, white);
+  }
+
+  @media (display-mode: standalone) {
+    body {
+      /* Avoid accidental text selection while scrolling chrome */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input,
+    textarea,
+    [contenteditable="true"] {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
