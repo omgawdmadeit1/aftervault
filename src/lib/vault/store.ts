@@ -2,6 +2,12 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { generateChecklist } from "./checklist";
 import { CATEGORY_META, PROMPTS, getNextPrompt } from "./prompts";
+import {
+  LOCAL_VAULT_STORAGE_KEY,
+  hasStoredVault,
+  migrateLegacyVaultKey,
+  vaultStorageKey,
+} from "./storage-key";
 import type {
   ChecklistTask,
   DesignatedContact,
@@ -375,7 +381,7 @@ export const useVaultStore = create<VaultStore>()(
       },
     }),
     {
-      name: "aftervault-v1",
+      name: LOCAL_VAULT_STORAGE_KEY,
       storage,
       skipHydration: true,
       partialize: (s) => ({
@@ -398,4 +404,33 @@ export const useVaultStore = create<VaultStore>()(
   ),
 );
 
+/**
+ * Bind persist to this session's user (or the local key) and rehydrate.
+ * Resets in-memory vault only when the target key is empty so a signed-out
+ * visitor cannot keep the previous account's items, and an existing user
+ * vault is never overwritten with a blank snapshot.
+ */
+export async function hydrateVaultForUser(userId: string | null | undefined): Promise<void> {
+  const key = vaultStorageKey(userId);
+  const browserStorage = typeof window !== "undefined" ? window.localStorage : null;
+  if (browserStorage) {
+    migrateLegacyVaultKey(browserStorage, key);
+  }
+
+  useVaultStore.setState({ _hasHydrated: false });
+  useVaultStore.persist.setOptions({ name: key });
+
+  if (browserStorage && !hasStoredVault(browserStorage, key)) {
+    useVaultStore.setState({ ...emptyState(), _hasHydrated: false });
+  }
+
+  try {
+    await useVaultStore.persist.rehydrate();
+  } catch {
+    // Corrupt or unreadable persist blob — stay on empty/local state.
+  }
+  useVaultStore.getState().setHasHydrated(true);
+}
+
 export type { ChecklistTask, DesignatedContact, VaultItem };
+export { vaultStorageKey } from "./storage-key";
