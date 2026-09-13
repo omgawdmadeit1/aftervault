@@ -50,3 +50,29 @@ export function hasStoredVault(storage: StorageLike, key: string): boolean {
     return false;
   }
 }
+
+/**
+ * Drop persist blobs that zustand cannot parse. A leftover in-memory vault
+ * from the previous session must not be written onto this key on the next
+ * setHasHydrated() persist.
+ */
+export function discardUnreadableVaultKey(storage: StorageLike, key: string): boolean {
+  let raw: string | null;
+  try {
+    raw = storage.getItem(key);
+  } catch {
+    return false;
+  }
+  if (raw == null || raw === "") return false;
+  try {
+    JSON.parse(raw);
+    return false;
+  } catch {
+    try {
+      storage.removeItem(key);
+    } catch {
+      return false;
+    }
+    return true;
+  }
+}

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   LEGACY_VAULT_STORAGE_KEY,
   LOCAL_VAULT_STORAGE_KEY,
+  discardUnreadableVaultKey,
   hasStoredVault,
   migrateLegacyVaultKey,
   vaultStorageKey,
@@ -77,5 +78,24 @@ describe("cross-account isolation", () => {
 
     assert.equal(hasStoredVault(storage, bobKey), false);
     assert.match(storage.dump()[aliceKey] ?? "", /Alice checking/);
+  });
+
+  it("drops Bob's corrupt blob so hydrate cannot persist Alice onto his key", () => {
+    const bobKey = vaultStorageKey("bob");
+    const storage = memoryStorage({
+      [bobKey]: "{not-json",
+    });
+    assert.equal(discardUnreadableVaultKey(storage, bobKey), true);
+    assert.equal(hasStoredVault(storage, bobKey), false);
+    assert.equal(discardUnreadableVaultKey(storage, bobKey), false);
+  });
+
+  it("leaves a readable vault in place", () => {
+    const aliceKey = vaultStorageKey("alice");
+    const storage = memoryStorage({
+      [aliceKey]: JSON.stringify({ state: { ownerName: "Alice" } }),
+    });
+    assert.equal(discardUnreadableVaultKey(storage, aliceKey), false);
+    assert.match(storage.dump()[aliceKey] ?? "", /Alice/);
   });
 });

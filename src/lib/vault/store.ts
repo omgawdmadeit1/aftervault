@@ -4,6 +4,7 @@ import { generateChecklist } from "./checklist";
 import { CATEGORY_META, PROMPTS, getNextPrompt } from "./prompts";
 import {
   LOCAL_VAULT_STORAGE_KEY,
+  discardUnreadableVaultKey,
   hasStoredVault,
   migrateLegacyVaultKey,
   vaultStorageKey,
@@ -404,17 +405,14 @@ export const useVaultStore = create<VaultStore>()(
   ),
 );
 
-/**
- * Bind persist to this session's user (or the local key) and rehydrate.
- * Resets in-memory vault only when the target key is empty so a signed-out
- * visitor cannot keep the previous account's items, and an existing user
- * vault is never overwritten with a blank snapshot.
- */
-export async function hydrateVaultForUser(userId: string | null | undefined): Promise<void> {
+let hydrateTail: Promise<void> = Promise.resolve();
+
+async function hydrateVaultForUserNow(userId: string | null | undefined): Promise<void> {
   const key = vaultStorageKey(userId);
   const browserStorage = typeof window !== "undefined" ? window.localStorage : null;
   if (browserStorage) {
     migrateLegacyVaultKey(browserStorage, key);
+    discardUnreadableVaultKey(browserStorage, key);
   }
 
   useVaultStore.setState({ _hasHydrated: false });
@@ -427,9 +425,28 @@ export async function hydrateVaultForUser(userId: string | null | undefined): Pr
   try {
     await useVaultStore.persist.rehydrate();
   } catch {
-    // Corrupt or unreadable persist blob — stay on empty/local state.
+    useVaultStore.setState({ ...emptyState(), _hasHydrated: true });
+    return;
   }
   useVaultStore.getState().setHasHydrated(true);
+}
+
+/**
+ * Bind persist to this session's user (or the local key) and rehydrate.
+ * Hydrates are serialized so an in-flight switch cannot persist the previous
+ * user's in-memory vault onto the next key. Unreadable blobs are discarded
+ * before rehydrate for the same reason.
+ */
+export function hydrateVaultForUser(userId: string | null | undefined): Promise<void> {
+  const run = hydrateTail.then(
+    () => hydrateVaultForUserNow(userId),
+    () => hydrateVaultForUserNow(userId),
+  );
+  hydrateTail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
 }
 
 export type { ChecklistTask, DesignatedContact, VaultItem };
