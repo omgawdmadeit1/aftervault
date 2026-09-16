@@ -52,6 +52,21 @@ describe("migrateLegacyVaultKey", () => {
     assert.match(storage.dump()[target] ?? "", /Jordan/);
   });
 
+  it("does not consume the legacy blob during a signed-out hydrate", () => {
+    const estate = JSON.stringify({ state: { ownerName: "Jordan", items: [{ title: "Will" }] } });
+    const storage = memoryStorage({
+      [LEGACY_VAULT_STORAGE_KEY]: estate,
+    });
+    assert.equal(migrateLegacyVaultKey(storage, LOCAL_VAULT_STORAGE_KEY), false);
+    assert.equal(hasStoredVault(storage, LEGACY_VAULT_STORAGE_KEY), true);
+    assert.equal(hasStoredVault(storage, LOCAL_VAULT_STORAGE_KEY), false);
+
+    const ownerKey = vaultStorageKey("jordan");
+    assert.equal(migrateLegacyVaultKey(storage, ownerKey), true);
+    assert.equal(hasStoredVault(storage, LEGACY_VAULT_STORAGE_KEY), false);
+    assert.match(storage.dump()[ownerKey] ?? "", /Will/);
+  });
+
   it("does not overwrite an already-scoped vault", () => {
     const target = vaultStorageKey("alice");
     const storage = memoryStorage({

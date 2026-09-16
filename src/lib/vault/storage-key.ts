@@ -17,7 +17,10 @@ export function vaultStorageKey(userId: string | null | undefined): string {
 }
 
 /**
- * Move the pre-namespaced `aftervault-v1` blob onto `targetKey` once.
+ * Move the pre-namespaced `aftervault-v1` blob onto a signed-in user key once.
+ * Never parks it on the signed-out `:local` key — VaultHydration runs for
+ * signed-out visits first (`/` / `/login`), and consuming the blob there
+ * orphans the estate from the owner and exposes it to later guests.
  * Does not overwrite an existing scoped vault.
  */
 export function migrateLegacyVaultKey(
@@ -25,6 +28,7 @@ export function migrateLegacyVaultKey(
   targetKey: string,
 ): boolean {
   if (targetKey === LEGACY_VAULT_STORAGE_KEY) return false;
+  if (targetKey === LOCAL_VAULT_STORAGE_KEY) return false;
   let legacy: string | null;
   try {
     legacy = storage.getItem(LEGACY_VAULT_STORAGE_KEY);
