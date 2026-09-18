@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   LEGACY_VAULT_STORAGE_KEY,
   LOCAL_VAULT_STORAGE_KEY,
+  claimLocalVaultForUser,
   hasStoredVault,
   migrateLegacyVaultKey,
   vaultStorageKey,
@@ -62,6 +63,40 @@ describe("migrateLegacyVaultKey", () => {
     assert.equal(hasStoredVault(storage, LEGACY_VAULT_STORAGE_KEY), false);
     assert.match(storage.dump()[target] ?? "", /Alice/);
     assert.doesNotMatch(storage.dump()[target] ?? "", /Legacy/);
+  });
+});
+
+describe("claimLocalVaultForUser", () => {
+  it("moves a signed-out vault onto a first-time user key", () => {
+    const userKey = vaultStorageKey("alice");
+    const storage = memoryStorage({
+      [LOCAL_VAULT_STORAGE_KEY]: JSON.stringify({
+        state: { ownerName: "Alice", items: [{ title: "Life insurance packet" }] },
+      }),
+    });
+    assert.equal(claimLocalVaultForUser(storage, userKey), true);
+    assert.equal(hasStoredVault(storage, LOCAL_VAULT_STORAGE_KEY), false);
+    assert.match(storage.dump()[userKey] ?? "", /Life insurance packet/);
+  });
+
+  it("does not overwrite an existing signed-in vault", () => {
+    const userKey = vaultStorageKey("alice");
+    const storage = memoryStorage({
+      [LOCAL_VAULT_STORAGE_KEY]: JSON.stringify({ state: { ownerName: "Guest" } }),
+      [userKey]: JSON.stringify({ state: { ownerName: "Alice" } }),
+    });
+    assert.equal(claimLocalVaultForUser(storage, userKey), false);
+    assert.match(storage.dump()[userKey] ?? "", /Alice/);
+    assert.doesNotMatch(storage.dump()[userKey] ?? "", /Guest/);
+    assert.equal(hasStoredVault(storage, LOCAL_VAULT_STORAGE_KEY), true);
+  });
+
+  it("does nothing while still signed out", () => {
+    const storage = memoryStorage({
+      [LOCAL_VAULT_STORAGE_KEY]: JSON.stringify({ state: { ownerName: "Guest" } }),
+    });
+    assert.equal(claimLocalVaultForUser(storage, LOCAL_VAULT_STORAGE_KEY), false);
+    assert.equal(hasStoredVault(storage, LOCAL_VAULT_STORAGE_KEY), true);
   });
 });
 

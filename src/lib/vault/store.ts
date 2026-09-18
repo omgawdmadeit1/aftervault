@@ -4,6 +4,7 @@ import { generateChecklist } from "./checklist";
 import { CATEGORY_META, PROMPTS, getNextPrompt } from "./prompts";
 import {
   LOCAL_VAULT_STORAGE_KEY,
+  claimLocalVaultForUser,
   hasStoredVault,
   migrateLegacyVaultKey,
   vaultStorageKey,
@@ -408,13 +409,15 @@ export const useVaultStore = create<VaultStore>()(
  * Bind persist to this session's user (or the local key) and rehydrate.
  * Resets in-memory vault only when the target key is empty so a signed-out
  * visitor cannot keep the previous account's items, and an existing user
- * vault is never overwritten with a blank snapshot.
+ * vault is never overwritten with a blank snapshot. A first sign-in claims
+ * the guest `:local` vault so "Sign in anytime" does not drop estate data.
  */
 export async function hydrateVaultForUser(userId: string | null | undefined): Promise<void> {
   const key = vaultStorageKey(userId);
   const browserStorage = typeof window !== "undefined" ? window.localStorage : null;
   if (browserStorage) {
     migrateLegacyVaultKey(browserStorage, key);
+    claimLocalVaultForUser(browserStorage, key);
   }
 
   useVaultStore.setState({ _hasHydrated: false });
