@@ -43,6 +43,37 @@ export function migrateLegacyVaultKey(
   }
 }
 
+/**
+ * Move a signed-out `:local` vault onto a first-time signed-in user key.
+ * The landing page and /app banner invite guests to build a local vault and
+ * "Sign in anytime" — without this claim, hydrateVaultForUser sees an empty
+ * user key, resets memory, and orphans the estate on `:local`.
+ * Never overwrites an existing scoped vault.
+ */
+export function claimLocalVaultForUser(
+  storage: StorageLike,
+  targetKey: string,
+): boolean {
+  if (targetKey === LEGACY_VAULT_STORAGE_KEY || targetKey === LOCAL_VAULT_STORAGE_KEY) {
+    return false;
+  }
+  let local: string | null;
+  try {
+    if (storage.getItem(targetKey)) return false;
+    local = storage.getItem(LOCAL_VAULT_STORAGE_KEY);
+  } catch {
+    return false;
+  }
+  if (!local) return false;
+  try {
+    storage.setItem(targetKey, local);
+    storage.removeItem(LOCAL_VAULT_STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function hasStoredVault(storage: StorageLike, key: string): boolean {
   try {
     return storage.getItem(key) != null;
