@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { PHASE_LABELS, checklistStats } from "@/lib/vault/checklist";
 import { TEMPLATES, fillTemplate } from "@/lib/vault/templates";
+import { planAfterModeOpen } from "@/lib/vault/after-mode";
 import { useVaultStore } from "@/lib/vault/store";
 import type { ChecklistPhase } from "@/lib/vault/types";
 import { cn } from "@/lib/utils";
@@ -31,8 +32,6 @@ function AfterPage() {
   const setTaskNotes = useVaultStore((s) => s.setTaskNotes);
   const markReferralShared = useVaultStore((s) => s.markReferralShared);
   const referralShared = useVaultStore((s) => s.referralShared);
-  const hydrateDemo = useVaultStore((s) => s.hydrateDemo);
-
   const [phase, setPhase] = useState<ChecklistPhase | "all">("all");
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
 
@@ -69,12 +68,12 @@ function AfterPage() {
           <CardContent className="flex flex-col gap-3 sm:flex-row">
             <Button
               onClick={() => {
-                if (items.length === 0) {
-                  hydrateDemo();
-                  toast.message("Loaded sample vault so After mode has something to work with.");
+                const plan = planAfterModeOpen();
+                if (plan.hydrateSampleVault) return;
+                if (plan.activateRelease) {
+                  triggerRelease();
+                  toast.success("After mode activated. Checklist is ready.");
                 }
-                triggerRelease();
-                toast.success("After mode activated. Checklist is ready.");
               }}
             >
               Trigger After mode (demo)
