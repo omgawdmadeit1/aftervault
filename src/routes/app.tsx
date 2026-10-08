@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { authEnabled } from "@/lib/auth/client";
-import { useVaultStore } from "@/lib/vault/store";
+import { isVaultReadyForUser, useVaultStore } from "@/lib/vault/store";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -11,8 +11,10 @@ export const Route = createFileRoute("/app")({
 function AppLayout() {
   const { user, isPending } = useCurrentUserState();
   const hasHydrated = useVaultStore((s) => s._hasHydrated);
+  const hydratedUserId = useVaultStore((s) => s.hydratedUserId);
+  const vaultReady = isVaultReadyForUser(hasHydrated, hydratedUserId, user?.id);
 
-  if (isPending || !hasHydrated) {
+  if (isPending || !vaultReady) {
     return (
       <div className="grid min-h-dvh place-items-center bg-bg">
         <div className="flex flex-col items-center gap-3">

@@ -6,6 +6,7 @@ import {
   LOCAL_VAULT_STORAGE_KEY,
   hasStoredVault,
   migrateLegacyVaultKey,
+  vaultSessionId,
   vaultStorageKey,
 } from "./storage-key";
 import type {
@@ -187,6 +188,8 @@ function sampleVault(): Pick<
 
 interface VaultStore extends VaultState {
   _hasHydrated: boolean;
+  /** Session the in-memory vault was last hydrated for. `null` = signed-out. */
+  hydratedUserId: string | null | undefined;
   setHasHydrated: (v: boolean) => void;
   hydrateDemo: () => void;
   completeOnboarding: (input: {
@@ -232,6 +235,7 @@ export const useVaultStore = create<VaultStore>()(
     (set, get) => ({
       ...emptyState(),
       _hasHydrated: false,
+      hydratedUserId: undefined,
       setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       hydrateDemo: () => {
@@ -409,28 +413,50 @@ export const useVaultStore = create<VaultStore>()(
  * Resets in-memory vault only when the target key is empty so a signed-out
  * visitor cannot keep the previous account's items, and an existing user
  * vault is never overwritten with a blank snapshot.
+ *
+ * Hydrates are serialized and epoch-checked so a slower previous session
+ * cannot finish after an account switch and persist its estate onto the
+ * next user's key.
  */
+let hydrateEpoch = 0;
+let hydrateQueue: Promise<void> = Promise.resolve();
+
 export async function hydrateVaultForUser(userId: string | null | undefined): Promise<void> {
-  const key = vaultStorageKey(userId);
-  const browserStorage = typeof window !== "undefined" ? window.localStorage : null;
-  if (browserStorage) {
-    migrateLegacyVaultKey(browserStorage, key);
-  }
+  const epoch = ++hydrateEpoch;
+  const run = async () => {
+    if (epoch !== hydrateEpoch) return;
 
-  useVaultStore.setState({ _hasHydrated: false });
-  useVaultStore.persist.setOptions({ name: key });
+    const key = vaultStorageKey(userId);
+    const sessionId = vaultSessionId(userId);
+    const browserStorage = typeof window !== "undefined" ? window.localStorage : null;
+    if (browserStorage) {
+      migrateLegacyVaultKey(browserStorage, key);
+    }
 
-  if (browserStorage && !hasStoredVault(browserStorage, key)) {
-    useVaultStore.setState({ ...emptyState(), _hasHydrated: false });
-  }
+    useVaultStore.setState({ _hasHydrated: false, hydratedUserId: undefined });
+    useVaultStore.persist.setOptions({ name: key });
 
-  try {
-    await useVaultStore.persist.rehydrate();
-  } catch {
-    // Corrupt or unreadable persist blob — stay on empty/local state.
-  }
-  useVaultStore.getState().setHasHydrated(true);
+    if (browserStorage && !hasStoredVault(browserStorage, key)) {
+      useVaultStore.setState({ ...emptyState(), _hasHydrated: false, hydratedUserId: undefined });
+    }
+
+    try {
+      await useVaultStore.persist.rehydrate();
+    } catch {
+      // Corrupt or unreadable persist blob — stay on empty/local state.
+    }
+
+    if (epoch !== hydrateEpoch) return;
+    useVaultStore.setState({ _hasHydrated: true, hydratedUserId: sessionId });
+  };
+
+  const next = hydrateQueue.then(run, run);
+  hydrateQueue = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
 }
 
 export type { ChecklistTask, DesignatedContact, VaultItem };
-export { vaultStorageKey } from "./storage-key";
+export { isVaultReadyForUser, vaultSessionId, vaultStorageKey } from "./storage-key";
