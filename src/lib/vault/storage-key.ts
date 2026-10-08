@@ -17,6 +17,28 @@ export function vaultStorageKey(userId: string | null | undefined): string {
 }
 
 /**
+ * Canonical session id for the in-memory vault. `null` is the signed-out
+ * local session; a non-empty string is a signed-in user.
+ */
+export function vaultSessionId(userId: string | null | undefined): string | null {
+  const id = typeof userId === "string" ? userId.trim() : "";
+  return id ? id : null;
+}
+
+/**
+ * True only when the store finished hydrating *this* session.
+ * `_hasHydrated` alone is not enough: after an account switch it stays true
+ * from the previous user until the next hydrate effect runs.
+ */
+export function isVaultReadyForUser(
+  hasHydrated: boolean,
+  hydratedUserId: string | null | undefined,
+  userId: string | null | undefined,
+): boolean {
+  return hasHydrated && hydratedUserId === vaultSessionId(userId);
+}
+
+/**
  * Move the pre-namespaced `aftervault-v1` blob onto `targetKey` once.
  * Does not overwrite an existing scoped vault.
  */

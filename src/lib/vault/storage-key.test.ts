@@ -4,7 +4,9 @@ import {
   LEGACY_VAULT_STORAGE_KEY,
   LOCAL_VAULT_STORAGE_KEY,
   hasStoredVault,
+  isVaultReadyForUser,
   migrateLegacyVaultKey,
+  vaultSessionId,
   vaultStorageKey,
 } from "./storage-key.ts";
 
@@ -77,5 +79,29 @@ describe("cross-account isolation", () => {
 
     assert.equal(hasStoredVault(storage, bobKey), false);
     assert.match(storage.dump()[aliceKey] ?? "", /Alice checking/);
+  });
+});
+
+describe("isVaultReadyForUser", () => {
+  it("treats blank ids as the signed-out local session", () => {
+    assert.equal(vaultSessionId("alice"), "alice");
+    assert.equal(vaultSessionId("  "), null);
+    assert.equal(vaultSessionId(""), null);
+    assert.equal(vaultSessionId(undefined), null);
+    assert.equal(vaultSessionId(null), null);
+  });
+
+  it("stays closed while the previous session is still marked hydrated", () => {
+    assert.equal(isVaultReadyForUser(true, "alice", "bob"), false);
+    assert.equal(isVaultReadyForUser(true, "alice", null), false);
+    assert.equal(isVaultReadyForUser(true, null, "alice"), false);
+    assert.equal(isVaultReadyForUser(true, undefined, null), false);
+    assert.equal(isVaultReadyForUser(false, "alice", "alice"), false);
+  });
+
+  it("opens only after hydrate finishes for this session", () => {
+    assert.equal(isVaultReadyForUser(true, "alice", "alice"), true);
+    assert.equal(isVaultReadyForUser(true, null, null), true);
+    assert.equal(isVaultReadyForUser(true, null, "  "), true);
   });
 });
